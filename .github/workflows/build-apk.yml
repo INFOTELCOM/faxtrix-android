@@ -51,13 +51,13 @@ jobs:
           sha256sum android/app/build/outputs/apk/debug/app-debug.apk
 
       - name: Prepare APK
-        run: cp android/app/build/outputs/apk/debug/app-debug.apk "FAXTRIX-${GITHUB_SHA::7}.apk"
+        run: cp android/app/build/outputs/apk/debug/app-debug.apk "FAXTRIX-${GITHUB_SHA}.apk"
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: FAXTRIX-Android-APK
-          path: "FAXTRIX-${{github.sha}}.apk"
+          path: "FAXTRIX-${{ github.sha }}.apk"
           retention-days: 30
 
       - name: Publish GitHub Release for version tag
@@ -65,4 +65,4 @@ jobs:
         env:
           GH_TOKEN: ${{github.token}}
         run: |
-          gh release create "${GITHUB_REF_NAME}" "FAXTRIX-${GITHUB_SHA::7}.apk"             --title "FAXTRIX ${GITHUB_REF_NAME}"             --generate-notes
+          gh release create "${GITHUB_REF_NAME}" "FAXTRIX-${GITHUB_SHA}.apk"             --title "FAXTRIX ${GITHUB_REF_NAME}"             --generate-notes
