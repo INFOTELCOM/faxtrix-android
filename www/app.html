@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FAXTRIX — Application</title>
+<link rel="icon" href="assets/img/faxtrix-mark.webp">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=Instrument+Sans:wght@400;500;600&family=Martian+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/style.css">
+<link rel="stylesheet" href="assets/css/app.css">
+</head>
+<body class="app-body">
+
+<!-- ============ ÉCRAN DE CONNEXION ============ -->
+<div class="gate" id="gate">
+  <div class="gate-card">
+    <div class="gate-logo">
+      <img src="assets/img/faxtrix-mark.webp" alt="FAXTRIX">
+      <div><b>FAXTRIX</b><span>ESPACE CLIENT</span></div>
+    </div>
+    <h1 id="gateTitle">Connexion</h1>
+    <p id="gateSub">Accédez à votre espace FAXTRIX.</p>
+
+    <div class="gate-tabs" id="gateTabs">
+      <button type="button" class="active" data-gate-tab="login">Se connecter</button>
+      <button type="button" data-gate-tab="signup">Créer une entreprise</button>
+    </div>
+
+    <form class="contact-form" id="gateForm">
+      <label>E-mail professionnel<input type="email" id="gateEmail" required placeholder="vous@entreprise.com" autocomplete="email"></label>
+      <label>Mot de passe<input type="password" id="gatePass" required minlength="6" placeholder="••••••••" autocomplete="current-password"></label>
+      <button type="submit" class="btn btn-primary" style="width:100%"><span>Se connecter</span></button>
+      <p class="modal-status" data-status></p>
+      <p class="gate-note" style="margin-top:10px;"><a href="#" id="forgotLink" style="color:var(--ion)">Mot de passe oublié ?</a></p>
+    </form>
+
+    <form class="contact-form" id="resetForm" hidden>
+      <label>E-mail professionnel<input type="email" id="resetEmail" required placeholder="vous@entreprise.com" autocomplete="email"></label>
+      <button type="submit" class="btn btn-primary" style="width:100%"><span>Recevoir le lien de réinitialisation</span></button>
+      <p class="modal-status" data-status></p>
+      <p class="gate-note" style="margin-top:10px;"><a href="#" id="backToLoginLink" style="color:var(--ion)">Retour à la connexion</a></p>
+    </form>
+
+    <form class="contact-form" id="newPassForm" hidden>
+      <p style="font-size:12.5px;color:var(--slate-2);margin-bottom:10px;">Choisissez votre nouveau mot de passe.</p>
+      <label>Nouveau mot de passe<input type="password" id="newPass" required minlength="6" placeholder="6 caractères minimum" autocomplete="new-password"></label>
+      <button type="submit" class="btn btn-primary" style="width:100%"><span>Valider</span></button>
+      <p class="modal-status" data-status></p>
+    </form>
+
+    <form class="contact-form" id="signupForm" hidden>
+      <label>Nom de votre entreprise<input type="text" id="suCompany" required placeholder="ABC Réseaux"></label>
+      <label>Votre nom<input type="text" id="suName" required placeholder="Albert K."></label>
+      <label>E-mail professionnel<input type="email" id="suEmail" required placeholder="vous@entreprise.com" autocomplete="email"></label>
+      <label>Mot de passe<input type="password" id="suPass" required minlength="6" placeholder="6 caractères minimum" autocomplete="new-password"></label>
+      <button type="submit" class="btn btn-primary" style="width:100%"><span>Créer mon espace FAXTRIX</span></button>
+      <p class="modal-status" data-status></p>
+    </form>
+
+    <div class="gate-banner" id="gateBanner">Vos identifiants sont vérifiés par un vrai service d'authentification (Supabase). Chaque entreprise a son propre espace : vos données ne sont visibles que par les membres de votre entreprise.</div>
+  </div>
+</div>
+
+<!-- ============ COQUILLE DE L'APPLICATION ============ -->
+<div class="app-shell app-hidden" id="appShell">
+
+  <aside class="app-side" id="appSide">
+    <div class="app-side-logo"><img src="assets/img/faxtrix-mark.webp" alt=""><b>FAXTRIX</b></div>
+    <a href="index.html" class="app-site-link" style="display:flex;align-items:center;gap:8px;padding:9px 12px;margin:0 12px 10px;border-radius:8px;font-size:12px;color:var(--slate);text-decoration:none;border:1px solid var(--line-soft);">🌐 Voir le site</a>
+    <nav class="app-nav" id="appNav">
+      <button data-panel="accueil" class="active">
+        <svg viewBox="0 0 24 24"><path d="M4 11l8-7 8 7"/><path d="M6 10v9h12v-9"/></svg>Accueil
+      </button>
+      <button data-panel="crm">
+        <svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17" cy="7" r="2.2"/><path d="M15 12.4c2.3.5 4 2.4 4 4.8"/></svg>CRM
+      </button>
+      <button data-panel="tickets">
+        <svg viewBox="0 0 24 24"><path d="M4 7h16v3a2 2 0 000 4v3H4v-3a2 2 0 000-4V7z"/></svg>Tickets
+      </button>
+      <button data-panel="terrain">
+        <svg viewBox="0 0 24 24"><path d="M12 22s7-7.5 7-13a7 7 0 10-14 0c0 5.5 7 13 7 13z"/><circle cx="12" cy="9" r="2.4"/></svg>Terrain
+      </button>
+      <button data-panel="equipes">
+        <svg viewBox="0 0 24 24"><circle cx="8" cy="9" r="3"/><path d="M2 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17" cy="8" r="2.3"/><path d="M15 13.3c2.5.4 4.5 2.4 4.5 5.7"/></svg>Équipes
+      </button>
+      <button data-panel="automatisation">
+        <svg viewBox="0 0 24 24"><path d="M13 2L4 14h6l-1 8 9-12h-6l1-8z"/></svg>Automatisation
+      </button>
+      <button data-panel="intelligence">
+        <svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/><path d="M9 6V3M15 6V3M9 21v-3M15 21v-3M6 9H3M6 15H3M21 9h-3M21 15h-3"/></svg>Intelligence
+      </button>
+      <button data-panel="simulation">
+        <svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/><circle cx="8" cy="6" r="2"/><circle cx="16" cy="12" r="2"/><circle cx="10" cy="18" r="2"/></svg>Simulation
+      </button>
+      <button data-panel="parametres">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/></svg>Paramètres
+      </button>
+    </nav>
+    <div class="app-side-foot">
+
+    </div>
+  </aside>
+
+  <div class="app-main">
+    <header class="app-top">
+      <div>
+        <h2 id="topTitle">Bonjour</h2>
+        <p class="sub" id="topSub">Voici un aperçu de votre espace FAXTRIX.</p>
+      </div>
+      <div class="app-top-actions">
+        <button class="app-icon-btn" id="notifBtn" aria-label="Notifications">
+          <svg viewBox="0 0 24 24"><path d="M6 8a6 6 0 1112 0c0 7 2 8 2 8H4s2-1 2-8"/><path d="M9 18a3 3 0 006 0"/></svg>
+          <span class="app-badge app-hidden" id="notifBadge">0</span>
+        </button>
+        <div class="app-user" id="userMenuBtn">
+          <div class="app-user-av" id="userAv">A</div>
+          <span id="userName">Albert</span>
+        </div>
+      </div>
+    </header>
+
+    <div class="app-body-area">
+      <div class="demo-banner" id="companyBanner">
+        <span>●</span>
+        <div><b id="companyBannerName">—</b> — données réelles, synchronisées et visibles uniquement par votre entreprise.</div>
+      </div>
+
+      <!-- ---------- ACCUEIL ---------- -->
+      <section class="app-panel active" data-panel="accueil">
+        <div class="app-stats">
+          <div class="app-stat"><b id="statClients">0</b><span>CLIENTS CRM</span></div>
+          <div class="app-stat"><b id="statTickets">0</b><span>TICKETS OUVERTS</span></div>
+          <div class="app-stat"><b id="statEquipes">0</b><span>MEMBRES D'ÉQUIPE</span></div>
+          <div class="app-stat"><b id="statMissions">0</b><span>MISSIONS EN COURS</span></div>
+        </div>
+        <div class="app-grid2">
+          <div class="app-card">
+            <div class="app-card-head"><h3>Activité récente</h3></div>
+            <div class="app-list" id="activityList"></div>
+          </div>
+          <div class="app-card">
+            <div class="app-card-head"><h3>Répartition CRM</h3></div>
+            <div id="pipelineMini"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ---------- CRM ---------- -->
+      <section class="app-panel" data-panel="crm">
+        <div class="app-stats">
+          <div class="app-stat"><b id="crmTotal">0</b><span>TOTAL CLIENTS</span></div>
+          <div class="app-stat"><b id="crmValeur">0 €</b><span>VALEUR PIPELINE</span></div>
+          <div class="app-stat"><b id="crmActifs">0</b><span>CLIENTS ACTIFS</span></div>
+          <div class="app-stat"><b id="crmNego">0</b><span>EN NÉGOCIATION</span></div>
+        </div>
+        <div class="app-toolbar">
+          <div class="app-tabs" id="crmTabs">
+            <button data-filter="Tous" class="active">Tous</button>
+            <button data-filter="Prospect">Prospects</button>
+            <button data-filter="Négociation">Négociation</button>
+            <button data-filter="Actif">Actifs</button>
+            <button data-filter="Attente">En attente</button>
+          </div>
+          <div class="app-search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg><input type="search" id="crmSearch" placeholder="Rechercher un client…"></div>
+          <button class="btn btn-primary" id="crmAddBtn"><span>+ Nouveau client</span></button>
+        </div>
+        <div class="app-list" id="crmList"></div>
+      </section>
+
+      <!-- ---------- TICKETS ---------- -->
+      <section class="app-panel" data-panel="tickets">
+        <div class="app-stats">
+          <div class="app-stat"><b id="tkTotal">0</b><span>TICKETS TOTAL</span></div>
+          <div class="app-stat"><b id="tkOuverts">0</b><span>OUVERTS</span></div>
+          <div class="app-stat"><b id="tkHaute">0</b><span>PRIORITÉ HAUTE</span></div>
+          <div class="app-stat"><b id="tkResolus">0</b><span>RÉSOLUS</span></div>
+        </div>
+        <div class="app-toolbar">
+          <div class="app-tabs" id="tkTabs">
+            <button data-filter="Tous" class="active">Tous</button>
+            <button data-filter="Nouveau">Nouveaux</button>
+            <button data-filter="En cours">En cours</button>
+            <button data-filter="Résolu">Résolus</button>
+          </div>
+          <div class="app-search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg><input type="search" id="tkSearch" placeholder="Rechercher un ticket…"></div>
+          <button class="btn btn-primary" id="tkAddBtn"><span>+ Nouveau ticket</span></button>
+        </div>
+        <div class="app-list" id="tkList"></div>
+      </section>
+
+      <!-- ---------- TERRAIN ---------- -->
+      <section class="app-panel" data-panel="terrain">
+        <div class="app-stats">
+          <div class="app-stat"><b id="teTotal">0</b><span>MISSIONS</span></div>
+          <div class="app-stat"><b id="teCours">0</b><span>EN COURS</span></div>
+          <div class="app-stat"><b id="tePlanif">0</b><span>PLANIFIÉES</span></div>
+          <div class="app-stat"><b id="teTerm">0</b><span>TERMINÉES</span></div>
+        </div>
+        <div class="app-toolbar">
+          <div style="flex:1"></div>
+          <button class="btn btn-primary" id="teAddBtn"><span>+ Nouvelle mission</span></button>
+        </div>
+        <div class="app-list" id="teList"></div>
+      </section>
+
+      <!-- ---------- ÉQUIPES ---------- -->
+      <section class="app-panel" data-panel="equipes">
+        <div class="app-toolbar">
+          <div style="flex:1"></div>
+          <button class="btn btn-primary" id="eqAddBtn"><span>+ Membre</span></button>
+        </div>
+        <div class="app-list" id="eqList"></div>
+      </section>
+
+      <!-- ---------- AUTOMATISATION ---------- -->
+      <section class="app-panel" data-panel="automatisation">
+        <div class="app-card" style="margin-bottom:22px;">
+          <p style="font-size:13px; color:var(--slate); line-height:1.7;">Une règle active se déclenche réellement dans cette démonstration : un ticket créé en priorité <b class="crit">Haute</b> ajoute automatiquement une notification et alerte l'équipe. Les autres règles sont illustratives — dans l'application finale, chacune déclencherait une vraie action côté serveur.</p>
+        </div>
+        <div class="app-toolbar"><div style="flex:1"></div><button class="btn btn-primary" id="autoAddBtn"><span>+ Créer une règle</span></button></div>
+        <div id="autoList"></div>
+      </section>
+
+      <!-- ---------- INTELLIGENCE (Business Brain) ---------- -->
+      <section class="app-panel" data-panel="intelligence">
+        <div class="app-card" style="margin-bottom:22px;">
+          <div class="app-card-head"><h3>Business Brain</h3><span class="chip mid">Calculé en direct</span></div>
+          <p style="font-size:13px; color:var(--slate); margin-bottom:16px;">Ces indicateurs sont recalculés à partir de vos données réelles de démonstration (CRM, tickets, terrain, équipes) — pas d'aléatoire, pas de modèle d'IA distant.</p>
+          <div class="app-list" id="brainList"></div>
+        </div>
+      </section>
+
+      <!-- ---------- SIMULATION (Decision Simulator) ---------- -->
+      <section class="app-panel" data-panel="simulation">
+        <div class="app-card">
+          <div class="app-card-head"><h3>Decision Simulator</h3><span class="chip mid">Formule simplifiée</span></div>
+          <p style="font-size:13px; color:var(--slate); margin-bottom:24px;">Déplacez les curseurs pour estimer l'effet de deux décisions courantes. Calcul linéaire simple à but illustratif — pas un modèle prédictif réel.</p>
+          <div class="sim-slider">
+            <div class="sl-head"><span>Techniciens supplémentaires</span><b id="simTechVal">0</b></div>
+            <input type="range" id="simTech" min="0" max="6" value="0">
+          </div>
+          <div class="sim-slider">
+            <div class="sl-head"><span>Réduction du délai d'intervention</span><b id="simDelayVal">0%</b></div>
+            <input type="range" id="simDelay" min="0" max="50" value="0">
+          </div>
+          <div class="sim-result">
+            <div><b id="simProd">+0%</b><span>PRODUCTIVITÉ</span></div>
+            <div><b id="simCost">+0%</b><span>COÛTS</span></div>
+            <div><b id="simRisk">0%</b><span>RISQUE</span></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ---------- PARAMÈTRES ---------- -->
+      <section class="app-panel" data-panel="parametres">
+        <div class="app-card" style="max-width:480px;">
+          <h3>Profil</h3>
+          <form class="contact-form" id="profileForm">
+            <label>Nom affiché<input type="text" id="profName" placeholder="Albert"></label>
+            <button type="submit" class="btn btn-ghost"><span>Enregistrer</span></button>
+          </form>
+          <div class="profile-row"><span>Entreprise</span><span id="profCompanyName">—</span></div>
+          <div class="profile-row"><span>Session</span><button class="btn btn-ghost" id="logoutBtn"><span>Se déconnecter</span></button></div>
+        </div>
+
+        <div class="app-card" style="max-width:480px; margin-top:20px;" id="teamCard" hidden>
+          <h3>Équipe</h3>
+          <p style="font-size:12.5px; color:var(--slate-2); margin-bottom:14px;">Invitez un collègue par e-mail : à son inscription avec cette adresse, il rejoint automatiquement votre entreprise.</p>
+          <form class="contact-form" id="inviteForm">
+            <label>E-mail à inviter<input type="email" id="inviteEmail" required placeholder="collegue@entreprise.com"></label>
+            <button type="submit" class="btn btn-ghost"><span>Envoyer l'invitation</span></button>
+            <p class="modal-status" data-status></p>
+          </form>
+          <div id="inviteList" style="margin-top:14px;"></div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+</div>
+
+<!-- ============ TIROIR (ajout / édition) ============ -->
+<div class="app-drawer" id="drawer">
+  <div class="app-drawer-bg" data-drawer-close></div>
+  <div class="app-drawer-panel">
+    <button class="app-drawer-close" data-drawer-close>&times;</button>
+    <h3 id="drawerTitle">Nouveau</h3>
+
+    <form class="contact-form" id="crmForm" data-kind="crm">
+      <input type="hidden" id="crmId">
+      <label>Nom du client<input type="text" id="crmNom" required placeholder="ABC Réseaux"></label>
+      <label>Statut
+        <select id="crmStatut"><option>Prospect</option><option>Négociation</option><option>Actif</option><option>Attente</option></select>
+      </label>
+      <label>Valeur estimée (€)<input type="number" id="crmValeurInput" min="0" step="100" placeholder="12000"></label>
+      <button type="submit" class="btn btn-primary"><span>Enregistrer</span></button>
+    </form>
+
+    <form class="contact-form" id="tkForm" data-kind="tk" hidden>
+      <input type="hidden" id="tkId">
+      <label>Titre du ticket<input type="text" id="tkTitre" required placeholder="Problème réseau"></label>
+      <label>Client concerné<input type="text" id="tkClient" placeholder="ABC Réseaux"></label>
+      <label>Priorité<select id="tkPriorite"><option>Basse</option><option selected>Moyenne</option><option>Haute</option></select></label>
+      <label>Statut<select id="tkStatut"><option>Nouveau</option><option>En cours</option><option>Résolu</option><option>Fermé</option></select></label>
+      <button type="submit" class="btn btn-primary"><span>Enregistrer</span></button>
+    </form>
+
+    <form class="contact-form" id="teForm" data-kind="te" hidden>
+      <input type="hidden" id="teId">
+      <label>Technicien<input type="text" id="teTech" required placeholder="Sarah K."></label>
+      <label>Client / site<input type="text" id="teClient" placeholder="ABC Réseaux — Agence centre-ville"></label>
+      <label>Statut<select id="teStatut"><option>Planifiée</option><option>En cours</option><option>Terminée</option></select></label>
+      <button type="submit" class="btn btn-primary"><span>Enregistrer</span></button>
+    </form>
+
+    <form class="contact-form" id="eqForm" data-kind="eq" hidden>
+      <input type="hidden" id="eqId">
+      <label>Nom<input type="text" id="eqNom" required placeholder="Sarah K."></label>
+      <label>Rôle<input type="text" id="eqRole" placeholder="Technicienne terrain"></label>
+      <label>Statut<select id="eqStatut"><option>Disponible</option><option>En ligne</option><option>En mission</option></select></label>
+      <label>Charge actuelle (%)<input type="number" id="eqCharge" min="0" max="100" value="50"></label>
+      <button type="submit" class="btn btn-primary"><span>Enregistrer</span></button>
+    </form>
+
+    <form class="contact-form" id="autoForm" data-kind="auto" hidden>
+      <label>Déclencheur (SI)<input type="text" id="autoTrigger" required placeholder="Nouveau ticket priorité haute"></label>
+      <label>Action (ALORS)<input type="text" id="autoAction" required placeholder="Notifier le manager"></label>
+      <button type="submit" class="btn btn-primary"><span>Ajouter la règle</span></button>
+    </form>
+  </div>
+</div>
+
+<!-- ============ MENU NOTIFICATIONS / PROFIL ============ -->
+<div class="app-drawer" id="notifDrawer">
+  <div class="app-drawer-bg" data-drawer-close-notif></div>
+  <div class="app-drawer-panel" style="width:min(360px,92vw)">
+    <button class="app-drawer-close" data-drawer-close-notif>&times;</button>
+    <h3>Notifications</h3>
+    <div class="app-list" id="notifList"></div>
+  </div>
+</div>
+
+<div class="toast-wrap" id="toastWrap"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="assets/js/app.js" defer></script>
+</body>
+</html>
