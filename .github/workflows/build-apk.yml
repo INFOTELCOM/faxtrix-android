@@ -14,7 +14,7 @@ env:
 
 jobs:
   build:
-    name: Build signed Android APK
+    name: Build FAXTRIX Android
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -35,23 +35,14 @@ jobs:
       - name: Install npm dependencies
         run: npm ci
 
-      - name: Prepare release keystore
-        env:
-          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+      - name: Read FAXTRIX version
+        id: version
+        shell: bash
         run: |
-          set -euo pipefail
-          test -n "$ANDROID_KEYSTORE_BASE64" || { echo 'Missing ANDROID_KEYSTORE_BASE64'; exit 1; }
-          test -n "$ANDROID_KEYSTORE_PASSWORD" || { echo 'Missing ANDROID_KEYSTORE_PASSWORD'; exit 1; }
-          test -n "$ANDROID_KEY_ALIAS" || { echo 'Missing ANDROID_KEY_ALIAS'; exit 1; }
-          test -n "$ANDROID_KEY_PASSWORD" || { echo 'Missing ANDROID_KEY_PASSWORD'; exit 1; }
-          printf '%s' "$ANDROID_KEYSTORE_BASE64" | tr -d '[:space:]' | base64 --decode > "$ANDROID_KEYSTORE_PATH"
-          test -s "$ANDROID_KEYSTORE_PATH"
-          keytool -list -keystore "$ANDROID_KEYSTORE_PATH" -storepass "$ANDROID_KEYSTORE_PASSWORD" >/dev/null
-          keytool -list -keystore "$ANDROID_KEYSTORE_PATH" -storepass "$ANDROID_KEYSTORE_PASSWORD" -alias "$ANDROID_KEY_ALIAS" -noprompt >/dev/null
-          echo 'Release keystore validated.'
+          VERSION_NAME=$(node -p "require('./www/version.json').version")
+          VERSION_CODE=$(node -p "require('./www/version.json').versionCode")
+          echo "name=$VERSION_NAME" >> "$GITHUB_OUTPUT"
+          echo "code=$VERSION_CODE" >> "$GITHUB_OUTPUT"
 
       - name: Sync Capacitor Android
         run: npx cap sync android
@@ -59,18 +50,37 @@ jobs:
       - name: Make Gradle executable
         run: chmod +x android/gradlew
 
-      - name: Read FAXTRIX version
-        id: version
-        shell: bash
+      - name: Build debug APK (always available for testing)
+        working-directory: android
+        run: ./gradlew assembleDebug -PfaxtrixVersionName=${{ steps.version.outputs.name }} -PfaxtrixVersionCode=${{ steps.version.outputs.code }}
+
+      - name: Prepare debug APK
+        run: cp android/app/build/outputs/apk/debug/app-debug.apk "FAXTRIX-${{ steps.version.outputs.name }}-debug.apk"
+
+      - name: Upload debug artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: FAXTRIX-Android-${{ steps.version.outputs.name }}-debug
+          path: "FAXTRIX-${{ steps.version.outputs.name }}-debug.apk"
+          retention-days: 30
+
+      - name: Prepare release keystore (only when release secrets exist)
+        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' && secrets.ANDROID_KEYSTORE_PASSWORD != '' && secrets.ANDROID_KEY_ALIAS != '' && secrets.ANDROID_KEY_PASSWORD != '' }}
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
-          VERSION_NAME=$(node -p "require('./www/version.json').version")
-          VERSION_CODE=$(node -p "require('./www/version.json').versionCode")
-          test -n "$VERSION_NAME"
-          test -n "$VERSION_CODE"
-          echo "name=$VERSION_NAME" >> "$GITHUB_OUTPUT"
-          echo "code=$VERSION_CODE" >> "$GITHUB_OUTPUT"
+          set -euo pipefail
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | tr -d '[:space:]' | base64 --decode > "$ANDROID_KEYSTORE_PATH"
+          test -s "$ANDROID_KEYSTORE_PATH"
+          keytool -list -keystore "$ANDROID_KEYSTORE_PATH" -storepass "$ANDROID_KEYSTORE_PASSWORD" >/dev/null
+          keytool -list -keystore "$ANDROID_KEYSTORE_PATH" -storepass "$ANDROID_KEYSTORE_PASSWORD" -alias "$ANDROID_KEY_ALIAS" -noprompt >/dev/null
+          echo 'Release keystore validated.'
 
       - name: Build signed release APK
+        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' && secrets.ANDROID_KEYSTORE_PASSWORD != '' && secrets.ANDROID_KEY_ALIAS != '' && secrets.ANDROID_KEY_PASSWORD != '' }}
         working-directory: android
         env:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
@@ -78,7 +88,8 @@ jobs:
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: ./gradlew assembleRelease -PfaxtrixVersionName=${{ steps.version.outputs.name }} -PfaxtrixVersionCode=${{ steps.version.outputs.code }}
 
-      - name: Verify release APK
+      - name: Verify signed release APK
+        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' && secrets.ANDROID_KEYSTORE_PASSWORD != '' && secrets.ANDROID_KEY_ALIAS != '' && secrets.ANDROID_KEY_PASSWORD != '' }}
         env:
           APK: android/app/build/outputs/apk/release/app-release.apk
         run: |
@@ -88,21 +99,13 @@ jobs:
           "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" | grep -E "package:|targetSdkVersion:"
           sha256sum "$APK"
 
-      - name: Prepare distributable APK
-        run: cp android/app/build/outputs/apk/release/app-release.apk "FAXTRIX-${{ steps.version.outputs.name }}.apk"
-
-      - name: Upload release artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: FAXTRIX-Android-${{ steps.version.outputs.name }}
-          path: "FAXTRIX-${{ steps.version.outputs.name }}.apk"
-          retention-days: 30
-
-      - name: Publish or refresh stable latest release
+      - name: Publish stable release and update asset
+        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' && secrets.ANDROID_KEYSTORE_PASSWORD != '' && secrets.ANDROID_KEY_ALIAS != '' && secrets.ANDROID_KEY_PASSWORD != '' }}
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
+          cp android/app/build/outputs/apk/release/app-release.apk "FAXTRIX-${{ steps.version.outputs.name }}.apk"
           if gh release view latest >/dev/null 2>&1; then
             gh release upload latest "FAXTRIX-${{ steps.version.outputs.name }}.apk" --clobber
             gh release edit latest --title "FAXTRIX ${{ steps.version.outputs.name }}" --notes "Version stable ${{ steps.version.outputs.name }} — mise à jour automatique depuis main."
@@ -110,8 +113,16 @@ jobs:
             gh release create latest "FAXTRIX-${{ steps.version.outputs.name }}.apk" --title "FAXTRIX ${{ steps.version.outputs.name }}" --notes "Version stable ${{ steps.version.outputs.name }}."
           fi
 
+      - name: Upload signed release artifact
+        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' && secrets.ANDROID_KEYSTORE_PASSWORD != '' && secrets.ANDROID_KEY_ALIAS != '' && secrets.ANDROID_KEY_PASSWORD != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: FAXTRIX-Android-${{ steps.version.outputs.name }}-release
+          path: "FAXTRIX-${{ steps.version.outputs.name }}.apk"
+          retention-days: 30
+
       - name: Publish versioned tag release
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: ${{ startsWith(github.ref, 'refs/tags/v') && secrets.ANDROID_KEYSTORE_BASE64 != '' && secrets.ANDROID_KEYSTORE_PASSWORD != '' && secrets.ANDROID_KEY_ALIAS != '' && secrets.ANDROID_KEY_PASSWORD != '' }}
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
