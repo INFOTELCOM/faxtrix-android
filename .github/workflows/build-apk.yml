@@ -44,6 +44,22 @@ jobs:
           echo "name=$VERSION_NAME" >> "$GITHUB_OUTPUT"
           echo "code=$VERSION_CODE" >> "$GITHUB_OUTPUT"
 
+      - name: Detect release signing configuration
+        id: signing
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          if [ -n "$ANDROID_KEYSTORE_BASE64" ] && [ -n "$ANDROID_KEYSTORE_PASSWORD" ] && [ -n "$ANDROID_KEY_ALIAS" ] && [ -n "$ANDROID_KEY_PASSWORD" ]; then
+            echo 'enabled=true' >> "$GITHUB_OUTPUT"
+            echo 'Release signing secrets detected.'
+          else
+            echo 'enabled=false' >> "$GITHUB_OUTPUT"
+            echo 'Release signing secrets are not configured; debug APK will still be built.'
+          fi
+
       - name: Sync Capacitor Android
         run: npx cap sync android
 
@@ -64,8 +80,8 @@ jobs:
           path: "FAXTRIX-${{ steps.version.outputs.name }}-debug.apk"
           retention-days: 30
 
-      - name: Prepare release keystore (only when release secrets exist)
-        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' && secrets.ANDROID_KEYSTORE_PASSWORD != '' && secrets.ANDROID_KEY_ALIAS != '' && secrets.ANDROID_KEY_PASSWORD != '' }}
+      - name: Prepare release keystore
+        if: steps.signing.outputs.enabled == 'true'
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
@@ -80,7 +96,7 @@ jobs:
           echo 'Release keystore validated.'
 
       - name: Build signed release APK
-        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' && secrets.ANDROID_KEYSTORE_PASSWORD != '' && secrets.ANDROID_KEY_ALIAS != '' && secrets.ANDROID_KEY_PASSWORD != '' }}
+        if: steps.signing.outputs.enabled == 'true'
         working-directory: android
         env:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
@@ -89,7 +105,7 @@ jobs:
         run: ./gradlew assembleRelease -PfaxtrixVersionName=${{ steps.version.outputs.name }} -PfaxtrixVersionCode=${{ steps.version.outputs.code }}
 
       - name: Verify signed release APK
-        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' && secrets.ANDROID_KEYSTORE_PASSWORD != '' && secrets.ANDROID_KEY_ALIAS != '' && secrets.ANDROID_KEY_PASSWORD != '' }}
+        if: steps.signing.outputs.enabled == 'true'
         env:
           APK: android/app/build/outputs/apk/release/app-release.apk
         run: |
@@ -100,7 +116,7 @@ jobs:
           sha256sum "$APK"
 
       - name: Publish stable release and update asset
-        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' && secrets.ANDROID_KEYSTORE_PASSWORD != '' && secrets.ANDROID_KEY_ALIAS != '' && secrets.ANDROID_KEY_PASSWORD != '' }}
+        if: steps.signing.outputs.enabled == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -114,7 +130,7 @@ jobs:
           fi
 
       - name: Upload signed release artifact
-        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' && secrets.ANDROID_KEYSTORE_PASSWORD != '' && secrets.ANDROID_KEY_ALIAS != '' && secrets.ANDROID_KEY_PASSWORD != '' }}
+        if: steps.signing.outputs.enabled == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: FAXTRIX-Android-${{ steps.version.outputs.name }}-release
@@ -122,7 +138,7 @@ jobs:
           retention-days: 30
 
       - name: Publish versioned tag release
-        if: ${{ startsWith(github.ref, 'refs/tags/v') && secrets.ANDROID_KEYSTORE_BASE64 != '' && secrets.ANDROID_KEYSTORE_PASSWORD != '' && secrets.ANDROID_KEY_ALIAS != '' && secrets.ANDROID_KEY_PASSWORD != '' }}
+        if: startsWith(github.ref, 'refs/tags/v') && steps.signing.outputs.enabled == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
