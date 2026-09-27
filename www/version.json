@@ -1,0 +1,12 @@
+{
+  "version": "1.1.0",
+  "name": "FAXTRIX",
+  "channel": "stable",
+  "publishedAt": "2026-09-27",
+  "releaseUrl": "https://github.com/INFOTELCOM/faxtrix-android/releases/tag/latest",
+  "notes": [
+    "Nouvelle interface claire et sombre inspirée de la maquette FAXTRIX.",
+    "CRM, tickets, terrain, équipes, intelligence, simulation et sécurité regroupés.",
+    "Détection de nouvelle version sur le site, la PWA et l'application Android."
+  ]
+}
