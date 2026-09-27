@@ -1,10 +1,12 @@
 {
   "name":"FAXTRIX",
   "short_name":"FAXTRIX",
-  "description":"CRM, terrain, équipes et intelligence opérationnelle.",
-  "start_url":"/app-v2.html",
+  "description":"CRM, terrain, équipes, intelligence opérationnelle et simulation.",
+  "start_url":"./app.html",
+  "scope":"./",
   "display":"standalone",
-  "background_color":"#f5f8fc",
-  "theme_color":"#f8fbff",
+  "background_color":"#f6faff",
+  "theme_color":"#f6faff",
+  "orientation":"portrait-primary",
   "icons":[{"src":"assets/img/faxtrix-mark.webp","sizes":"512x512","type":"image/webp","purpose":"any maskable"}]
 }
