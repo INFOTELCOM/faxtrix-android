@@ -2,38 +2,56 @@ name: Build FAXTRIX Android APK
 
 on:
   push:
-    branches:
-      - main
-    tags:
-      - "v*"
+    branches: [main]
+    tags: ['v*']
   workflow_dispatch:
 
 permissions:
   contents: write
 
+env:
+  ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/faxtrix-release.jks
+
 jobs:
   build:
-    name: Build Android APK
+    name: Build signed Android APK
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Java 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
-          java-version: "17"
+          java-version: '17'
 
-      - name: Setup Node.js 20
-        uses: actions/setup-node@v4
+      - name: Setup Node.js 24
+        uses: actions/setup-node@v5
         with:
-          node-version: "20"
+          node-version: '24'
           cache: npm
 
       - name: Install npm dependencies
         run: npm ci
+
+      - name: Prepare release keystore
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          test -n "$ANDROID_KEYSTORE_BASE64" || { echo 'Missing ANDROID_KEYSTORE_BASE64'; exit 1; }
+          test -n "$ANDROID_KEYSTORE_PASSWORD" || { echo 'Missing ANDROID_KEYSTORE_PASSWORD'; exit 1; }
+          test -n "$ANDROID_KEY_ALIAS" || { echo 'Missing ANDROID_KEY_ALIAS'; exit 1; }
+          test -n "$ANDROID_KEY_PASSWORD" || { echo 'Missing ANDROID_KEY_PASSWORD'; exit 1; }
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | tr -d '[:space:]' | base64 --decode > "$ANDROID_KEYSTORE_PATH"
+          test -s "$ANDROID_KEYSTORE_PATH"
+          keytool -list -keystore "$ANDROID_KEYSTORE_PATH" -storepass "$ANDROID_KEYSTORE_PASSWORD" >/dev/null
+          keytool -list -keystore "$ANDROID_KEYSTORE_PATH" -storepass "$ANDROID_KEYSTORE_PASSWORD" -alias "$ANDROID_KEY_ALIAS" -noprompt >/dev/null
+          echo 'Release keystore validated.'
 
       - name: Sync Capacitor Android
         run: npx cap sync android
@@ -41,28 +59,64 @@ jobs:
       - name: Make Gradle executable
         run: chmod +x android/gradlew
 
-      - name: Build debug APK
-        working-directory: android
-        run: ./gradlew assembleDebug
-
-      - name: Verify APK
+      - name: Read FAXTRIX version
+        id: version
+        shell: bash
         run: |
-          test -f android/app/build/outputs/apk/debug/app-debug.apk
-          sha256sum android/app/build/outputs/apk/debug/app-debug.apk
+          VERSION_NAME=$(node -p "require('./www/version.json').version")
+          VERSION_CODE=$(node -p "require('./www/version.json').versionCode")
+          test -n "$VERSION_NAME"
+          test -n "$VERSION_CODE"
+          echo "name=$VERSION_NAME" >> "$GITHUB_OUTPUT"
+          echo "code=$VERSION_CODE" >> "$GITHUB_OUTPUT"
 
-      - name: Prepare APK
-        run: cp android/app/build/outputs/apk/debug/app-debug.apk "FAXTRIX-${GITHUB_SHA}.apk"
+      - name: Build signed release APK
+        working-directory: android
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: ./gradlew assembleRelease -PfaxtrixVersionName=${{ steps.version.outputs.name }} -PfaxtrixVersionCode=${{ steps.version.outputs.code }}
 
-      - name: Upload APK artifact
+      - name: Verify release APK
+        env:
+          APK: android/app/build/outputs/apk/release/app-release.apk
+        run: |
+          set -euo pipefail
+          test -f "$APK"
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$APK"
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" | grep -E "package:|targetSdkVersion:"
+          sha256sum "$APK"
+
+      - name: Prepare distributable APK
+        run: cp android/app/build/outputs/apk/release/app-release.apk "FAXTRIX-${{ steps.version.outputs.name }}.apk"
+
+      - name: Upload release artifact
         uses: actions/upload-artifact@v4
         with:
-          name: FAXTRIX-Android-APK
-          path: "FAXTRIX-${{ github.sha }}.apk"
+          name: FAXTRIX-Android-${{ steps.version.outputs.name }}
+          path: "FAXTRIX-${{ steps.version.outputs.name }}.apk"
           retention-days: 30
 
-      - name: Publish GitHub Release for version tag
+      - name: Publish or refresh stable latest release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if gh release view latest >/dev/null 2>&1; then
+            gh release upload latest "FAXTRIX-${{ steps.version.outputs.name }}.apk" --clobber
+            gh release edit latest --title "FAXTRIX ${{ steps.version.outputs.name }}" --notes "Version stable ${{ steps.version.outputs.name }} — mise à jour automatique depuis main."
+          else
+            gh release create latest "FAXTRIX-${{ steps.version.outputs.name }}.apk" --title "FAXTRIX ${{ steps.version.outputs.name }}" --notes "Version stable ${{ steps.version.outputs.name }}."
+          fi
+
+      - name: Publish versioned tag release
         if: startsWith(github.ref, 'refs/tags/v')
         env:
-          GH_TOKEN: ${{github.token}}
+          GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "${GITHUB_REF_NAME}" "FAXTRIX-${GITHUB_SHA}.apk"             --title "FAXTRIX ${GITHUB_REF_NAME}"             --generate-notes
+          gh release create "${GITHUB_REF_NAME}" "FAXTRIX-${{ steps.version.outputs.name }}.apk" --title "FAXTRIX ${{ steps.version.outputs.name }}" --generate-notes || gh release upload "${GITHUB_REF_NAME}" "FAXTRIX-${{ steps.version.outputs.name }}.apk" --clobber
+
+      - name: Remove release key
+        if: always()
+        run: rm -f "$ANDROID_KEYSTORE_PATH"
