@@ -10,7 +10,7 @@ permissions:
   contents: write
 
 env:
-  ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/faxtrix-release.jks
+  ANDROID_KEYSTORE_PATH: ${{ github.workspace }}/faxtrix-release.jks
 
 jobs:
   build:
